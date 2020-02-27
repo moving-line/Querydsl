@@ -2,6 +2,7 @@ package study.querydsl;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -318,6 +319,9 @@ public class QuerydslBasicTest {
         assertThat(loaded).as("fetch join 적용").isTrue();
     }
 
+    // JPA JPQL 서브쿼리 한계로 from절은 지원하지 않음. 고로 querydsl도 불가.(기본은 where절만. 하이버네이트가 select절 까지 가능하게함)
+    // 해결방안 1.join으로 변경 2.쿼리를 2번날림 3.nativeSQL(1,2가 안될경우)
+
     // 나이가 가장 많은 Member
     @Test
     void subQueryAge() {
@@ -384,6 +388,36 @@ public class QuerydslBasicTest {
         }
     }
 
-    // JPA JPQL 서브쿼리 한계로 from절은 지원하지 않음. 고로 querydsl도 불가.(기본은 where절만. 하이버네이트가 select절 까지 가능하게함)
-    // 해결방안 1.join으로 변경 2.쿼리를 2번날림 3.nativeSQL(1,2가 안될경우)
+    // 로직처리는 어지간하면 DB보다는 애플리케이션에서 하자
+    @Test
+    void basicCase() {
+        List<Tuple> fetch = queryFactory
+                .select(member.age
+                                .when(10).then("열살")
+                                .when(20).then("스무살")
+                                .otherwise("기타")
+                        , member.username)
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : fetch) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    @Test
+    void complexCase() {
+        List<String> result = queryFactory
+                .select(new CaseBuilder()
+                        .when(member.age.between(0, 20)).then("0~20살")
+                        .when(member.age.between(21, 30)).then("21~30살")
+                        .otherwise("기타")
+                )
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
 }
