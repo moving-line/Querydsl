@@ -216,4 +216,72 @@ public class QuerydslBasicTest {
         assertThat(teamB.get(team.name)).isEqualTo("teamB");
         assertThat(teamB.get(member.age.avg())).isEqualTo(35);
     }
+
+    // Team A에 소속된 모든 Member
+    @Test
+    void join() {
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("member1", "member2");
+    }
+
+    // 이른바 막조인
+    @Test
+    void theta_join() {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Member> result = queryFactory
+                .select(member)
+                .from(member, team)
+                .where(member.username.eq(team.name))
+                .fetch();
+
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("teamA", "teamB");
+    }
+
+    // Member - Team 간 join할 때, 팀 이름이 teamA 인 팀만, 회원은 모두 조회
+    // JPQL : "select m, t from Member m join m.team t on t.name = 'teamA'"
+    @Test
+    void join_on_filtering() {
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA"))
+                //inner Join에 on 사용하는 것은 where와 다를바가 없음
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    // 연관관계 없는 Entity를 outer join
+    // Member 와 Team 이름이 같은 것을 대상으로 함
+    @Test
+    void join_on_no_relation() {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name))
+                // leftJoin(Member.team, team)으로 쓰면 id간 매칭이 됨
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
 }
