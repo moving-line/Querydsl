@@ -1,5 +1,6 @@
 package study.querydsl;
 
+import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -80,7 +81,7 @@ public class QuerydslBasicTest {
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
 
-    // where절에서 콤마로 구분하면 and와 동일. 콤마로 구분하면 null을 무시해서 동적쿼리에 편함
+    // where절에서 콤마로구분하면 and와 동일. 콤마로 구분하면 null을 무시해서 동적쿼리에 편함
     @Test
     void searchAnd() {
         Member findMember = queryFactory
@@ -92,5 +93,30 @@ public class QuerydslBasicTest {
                 .fetchOne();
 
         assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    @Test
+    void resultFetch() {
+        List<Member> fetch = queryFactory
+                .selectFrom(member)
+                .fetch(); // 리스트, 없으면 빈리스트
+
+        Member fetchOne = queryFactory
+                .selectFrom(QMember.member)
+                .fetchOne(); // 단건, 없으면 null 2개이상은 NonUniqueResultException
+
+        Member fetchFirst = queryFactory
+                .selectFrom(QMember.member)
+                .fetchFirst(); // limit(1).fetchOne()과 동
+
+        QueryResults<Member> results = queryFactory
+                .selectFrom(member)
+                .fetchResults(); // 페이징 정보 포함. total count쿼리도 실행
+        long total = results.getTotal();
+        List<Member> content = results.getResults();
+
+        long total2 = queryFactory
+                .selectFrom(member)
+                .fetchCount(); // count쿼리만
     }
 }
