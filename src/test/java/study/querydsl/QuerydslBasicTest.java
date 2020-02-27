@@ -3,22 +3,20 @@ package study.querydsl;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import javassist.runtime.Desc;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.entity.Member;
-import study.querydsl.entity.QMember;
-import study.querydsl.entity.QTeam;
 import study.querydsl.entity.Team;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static study.querydsl.entity.QMember.*;
 import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
 
@@ -106,11 +104,11 @@ public class QuerydslBasicTest {
                 .fetch(); // 리스트, 없으면 빈리스트
 
         Member fetchOne = queryFactory
-                .selectFrom(QMember.member)
+                .selectFrom(member)
                 .fetchOne(); // 단건, 없으면 null 2개이상은 NonUniqueResultException
 
         Member fetchFirst = queryFactory
-                .selectFrom(QMember.member)
+                .selectFrom(member)
                 .fetchFirst(); // limit(1).fetchOne()과 동
 
         QueryResults<Member> results = queryFactory
@@ -283,5 +281,37 @@ public class QuerydslBasicTest {
         for (Tuple tuple : result) {
             System.out.println("tuple = " + tuple);
         }
+    }
+
+    @PersistenceUnit
+    EntityManagerFactory emf;
+
+    @Test
+    void noFetchJoin() {
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        assertThat(loaded).as("fetch join 미적용").isFalse();
+    }
+
+    @Test
+    void fetchJoin() {
+        em.flush();
+        em.clear();
+
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
+        assertThat(loaded).as("fetch join 적용").isTrue();
     }
 }
