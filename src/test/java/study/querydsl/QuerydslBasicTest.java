@@ -659,8 +659,6 @@ public class QuerydslBasicTest {
         for (Member member : result3) {
             System.out.println("name = " + member.getUsername());
         }
-
-
     }
 
     @Test
@@ -678,5 +676,34 @@ public class QuerydslBasicTest {
                 .delete(member)
                 .where(member.age.gt(18))
                 .execute();
+    }
+
+    @Test
+    void sqlFunction() {
+        List<String> result = queryFactory
+                .select(Expressions.stringTemplate(
+                        "function('replace', {0}, {1}, {2})",
+                        member.username, "member", "M"))
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+    @Test
+    void sqlFunction2() {
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+                .where(member.username.eq(
+                        Expressions.stringTemplate("function('lower', {0})", member.username)))
+//                .where(member.username.eq(member.username.lower())) ansi 표준은 어지간하면 다 이미 있음
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
     }
 }
