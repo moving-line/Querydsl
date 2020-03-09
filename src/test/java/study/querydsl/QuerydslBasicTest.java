@@ -4,7 +4,6 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
-import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
@@ -14,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.dto.MemberDto;
 import study.querydsl.dto.QMemberDto;
@@ -27,7 +27,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceUnit;
 import java.util.List;
 
-import static com.querydsl.jpa.JPAExpressions.*;
+import static com.querydsl.jpa.JPAExpressions.select;
 import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
@@ -621,5 +621,62 @@ public class QuerydslBasicTest {
 
     private BooleanExpression allEq(String usernameCond, Integer ageCond) {
         return usernameEq(usernameCond).and(ageEq(ageCond)); // 널처리또해야
+    }
+
+    @Test
+    void bulkUpdate() {
+        // member1 -> DB = member1
+        // member2 -> DB = member2
+        // member3 -> DB = member3
+        // member4 -> DB = member4
+
+        List<Member> result1 = queryFactory.selectFrom(member).fetch();
+        for (Member member : result1) {
+            System.out.println("name = " + member.getUsername());
+        }
+
+        // 영속성컨텍스트 무시하고 DB로 바로쏘는 벌크연산
+        long count = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+        // member1 -> DB = 비회원 <-> 영속성컨텍스트 = member1
+        // member2 -> DB = 비회원 <-> 영속성컨텍스트 = member2
+        // member3 -> DB = member3 <-> 영속성컨텍스트 = member3
+        // member4 -> DB = member4 <-> 영속성컨텍스트 = member4
+
+        List<Member> result2 = queryFactory.selectFrom(member).fetch();
+        for (Member member : result2) {
+            System.out.println("name = " + member.getUsername());
+        }
+
+        // 그러므로 벌크연산후 영속성컨텍스트 초기화 필수
+        em.flush();
+        em.clear();
+
+        List<Member> result3 = queryFactory.selectFrom(member).fetch();
+        for (Member member : result3) {
+            System.out.println("name = " + member.getUsername());
+        }
+
+
+    }
+
+    @Test
+    void bulkAddMultiply() {
+        queryFactory
+                .update(member)
+                .set(member.age, member.age.add(1))
+                .set(member.age, member.age.multiply(2))
+                .execute();
+    }
+
+    @Test
+    void bulkDelete() {
+        queryFactory
+                .delete(member)
+                .where(member.age.gt(18))
+                .execute();
     }
 }
