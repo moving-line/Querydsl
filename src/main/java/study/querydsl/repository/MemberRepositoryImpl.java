@@ -87,27 +87,27 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
                 .limit(pageable.getPageSize())
                 .fetch();
 
-        long total = queryFactory
-                .selectFrom(member)
-                .leftJoin(member.team, team)
-                .where(usernameEq(cond.getUsername()),
-                        teamNameEq(cond.getTeamName()),
-                        ageGoe(cond.getAgeGoe()),
-                        ageLoe(cond.getAgeLoe()))
-                .fetchCount();
-
-//        JPAQuery<Member> countQuery = queryFactory
+//        long total = queryFactory
 //                .selectFrom(member)
 //                .leftJoin(member.team, team)
 //                .where(usernameEq(cond.getUsername()),
 //                        teamNameEq(cond.getTeamName()),
 //                        ageGoe(cond.getAgeGoe()),
-//                        ageLoe(cond.getAgeLoe()));
+//                        ageLoe(cond.getAgeLoe()))
+//                .fetchCount();
 
-        return new PageImpl<>(content, pageable, total);
+        JPAQuery<Member> countQuery = queryFactory
+                .selectFrom(member)
+                .leftJoin(member.team, team)
+                .where(usernameEq(cond.getUsername()),
+                        teamNameEq(cond.getTeamName()),
+                        ageGoe(cond.getAgeGoe()),
+                        ageLoe(cond.getAgeLoe()));
+
+//        return new PageImpl<>(content, pageable, total);
 
 //        countQuery 최적화
-//        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchCount);
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchCount);
     }
 
     private BooleanExpression usernameEq(String username) {
